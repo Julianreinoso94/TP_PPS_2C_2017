@@ -7,6 +7,9 @@ import { PersonasServiceProvider } from "../../providers/personas-service/person
 
 import { Usuario } from "../../clases/usuario";
 
+import { AngularFireAuth } from 'angularfire2/auth';
+import firebase from "firebase";
+
 @IonicPage()
 @Component({
   selector: 'page-login',
@@ -18,11 +21,19 @@ export class LoginPage {
   private passw: any;
   private loginUsuario:Usuario;
   private listaUsuarios:any = [];
+  private datosLoginGitHub:any;
+  private provider = {
+    correo: '',
+    nombre:'',
+    foto:'',
+    perfil:'alumno',
+    loggedin:false
+  }
 
   constructor(public navCtrl: NavController, public navParams: NavParams,
               public alertCtrl:AlertController, public loadingCtrl:LoadingController,
               private auth:LoginServiceProvider, private servicioDB:PersonasServiceProvider,
-              public platform:Platform
+              public platform:Platform, public authe:AngularFireAuth
   ) {}
 
   ionViewDidLoad() {
@@ -35,7 +46,8 @@ export class LoginPage {
   login():void{
     const loading = this.loadingCtrl.create({
       content: 'Verificando datos. Espere...',
-      dismissOnPageChange: true
+      dismissOnPageChange: true,
+      spinner: 'bubbles'
     });
     loading.present();
     this.loginUsuario.setCorreo(this.correo);
@@ -47,7 +59,7 @@ export class LoginPage {
         this.listaUsuarios = this.servicioDB.getUsuariosLista();
         this.listaUsuarios.subscribe(lista=>{
           lista.forEach(usuario => {
-            //console.log(usuario);
+            console.log(usuario);
             if (usuario['correo'] == this.loginUsuario.getCorreo()) {
                 this.loginUsuario.setPerfil(usuario['perfil']);
                 this.loginUsuario.setNombre(usuario['nombre']);
@@ -116,16 +128,32 @@ export class LoginPage {
     }
 
 
+    crearAlumno(){
+      this.navCtrl.push('AlumnosFormPage');
+    }
+
     salir(){
       this.platform.exitApp();
     }
 
 
+   private logearEnGitHub(){
+    let proveedor = new firebase.auth.GithubAuthProvider();
 
+        this.authe.auth.signInWithPopup(proveedor).then(res =>{
+          console.log('res: '+ JSON.stringify(res));
 
+          this.loginUsuario.setCorreo(res.user.email);
+          this.loginUsuario.setPerfil('alumno');
+          this.loginUsuario.setNombre(res.user.displayName);
+          this.loginUsuario.setFoto(res.user.photoURL);
+          this.loginUsuario.setLoginSocial(true);
+          console.log('usuarios: ', this.loginUsuario);
 
+        }).then(res=>{
+          this.navCtrl.push('MenuPage', JSON.stringify(this.loginUsuario));
+        });
 
-
-
+}
 
 }
